@@ -1,0 +1,39 @@
+name: jest-ci
+
+on: push
+
+jobs:
+  test-front:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Goto client and run tests
+        run: cd client && npm i && npm test
+  docker:
+    # to make the job execute after another (here test-front)
+    needs: test-front
+    # to build the image only when merge on main
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          tags: soufcode/quete1902:latest
+          # as theres no DockerFile in root folder, we set a context pointing to the right folder
+          context: "{{defaultContext}}:client"
